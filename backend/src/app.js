@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const authRoutes = require('./routes/authRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -11,6 +12,8 @@ app.use(express.json());
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'College ERP API is running' });
 });
+
+app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);
 
