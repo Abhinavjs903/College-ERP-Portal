@@ -42,6 +42,22 @@ describe('Auth API', () => {
     expect(res.body.user.password).toBeUndefined();
   });
 
+  test('register ignores a role supplied in the body (no privilege escalation)', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ ...userData, role: 'admin' });
+    expect(res.statusCode).toBe(201);
+    expect(res.body.user.role).toBe('student');
+  });
+
+  test('login rejects a non-string email (NoSQL injection attempt)', async () => {
+    await registerUser();
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: { $gt: '' }, password: { $gt: '' } });
+    expect(res.statusCode).toBe(400);
+  });
+
   test('login with valid credentials returns a token', async () => {
     await registerUser();
     const res = await request(app)

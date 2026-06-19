@@ -9,11 +9,16 @@ const sanitize = (user) => ({
   role: user.role,
 });
 
+// Reject credential values that are not plain strings. Objects such as
+// { "$gt": "" } would otherwise reach Mongoose as query operators
+// (NoSQL injection / auth bypass).
+const areStrings = (...values) => values.every((v) => typeof v === 'string');
+
 // POST /api/auth/register
 const register = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
 
-  if (!name || !email || !password) {
+  if (!areStrings(name, email, password) || !name || !email || !password) {
     return res
       .status(400)
       .json({ message: 'Name, email and password are required' });
@@ -24,7 +29,10 @@ const register = async (req, res) => {
     return res.status(409).json({ message: 'Email already registered' });
   }
 
-  const user = await User.create({ name, email, password, role });
+  // Force the default role on public self-registration. Role is never taken
+  // from the request body to prevent privilege escalation; elevating a user
+  // to faculty/admin must go through a separate admin-authenticated path.
+  const user = await User.create({ name, email, password, role: 'student' });
   const token = generateToken(user);
 
   return res.status(201).json({ token, user: sanitize(user) });
@@ -34,7 +42,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  if (!areStrings(email, password) || !email || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
   }
 
